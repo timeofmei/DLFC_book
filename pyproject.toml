@@ -1,0 +1,9 @@
+[project]
+name = "dlfc-book"
+version = "0.1.0"
+description = "Deep Learning: Foundation and Concepts book SVG & book viewer HTML page"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx[http2]>=0.28.1",
+]
