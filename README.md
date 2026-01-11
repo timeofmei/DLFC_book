@@ -1,3 +1,3 @@
-# Deep Learning: Foundation and Concepts
+# Deep Learning: Foundations and Concepts
 
-book SVG & book viewer HTML page
+Book SVG & book viewer HTML page
