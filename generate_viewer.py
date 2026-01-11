@@ -1,8 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = []
-# ///
-
 from pathlib import Path
 
 TOTAL_PAGES = 666
@@ -13,7 +8,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SVG Viewer</title>
+    <title>Deep Learning: Foundations and Concepts</title>
     <style>
         body {{
             background-color: #333; /* Darker background for better contrast */
@@ -58,17 +53,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
+
 def generate_html():
     images = []
     for i in range(1, TOTAL_PAGES + 1):
         # Wrap image in a div for overflow hidden
         img_block = f'<div class="page-wrapper"><img src="svg/page_{i}.svg" alt="Page {i}" loading="lazy"></div>'
         images.append(img_block)
-    
+
     html_content = HTML_TEMPLATE.format(images="\n        ".join(images))
-    
+
     OUTPUT_FILE.write_text(html_content, encoding="utf-8")
     print(f"Generated {OUTPUT_FILE} with {TOTAL_PAGES} images.")
+
 
 if __name__ == "__main__":
     generate_html()
