@@ -1,7 +1,9 @@
 from pathlib import Path
+import json
+import re
 
-TOTAL_PAGES = 666
 OUTPUT_FILE = Path("index.html")
+SVG_DIR = Path("svg")
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -17,6 +19,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-family: sans-serif;
             display: flex;
             justify-content: center;
+        }}
+        #controls {{
+            position: fixed;
+            left: 12px;
+            bottom: 12px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            font-size: 14px;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }}
+        #controls.controls-hidden {{
+            opacity: 0;
+            transform: translateY(6px);
+        }}
+        #chapterSelect {{
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: none;
         }}
         .container {{
             width: 100%;
@@ -46,25 +70,131 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <div class="container">
-        {images}
+    <div id="controls">
+        <select id="chapterSelect">
+            {chapter_options}
+        </select>
     </div>
+    <div id="pages" class="container"></div>
+    <script>
+        const CHAPTERS = {chapters_json};
+
+        const container = document.getElementById("pages");
+        const select = document.getElementById("chapterSelect");
+        const controls = document.getElementById("controls");
+        let hideTimer = null;
+
+        function clearImages() {{
+            const imgs = container.querySelectorAll("img");
+            imgs.forEach((img) => {{
+                img.removeAttribute("src");
+            }});
+            container.innerHTML = "";
+        }}
+
+        function renderChapter(chapterId) {{
+            clearImages();
+            const pages = CHAPTERS[chapterId] || [];
+            const cacheBust = Date.now();
+            const fragment = document.createDocumentFragment();
+
+            pages.forEach((pageNum) => {{
+                const wrapper = document.createElement("div");
+                wrapper.className = "page-wrapper";
+
+                const img = document.createElement("img");
+                img.alt = `Page ${{pageNum}}`;
+                img.loading = "lazy";
+                img.src = `svg/${{chapterId}}/page_${{pageNum}}.svg?cb=${{cacheBust}}`;
+
+                wrapper.appendChild(img);
+                fragment.appendChild(wrapper);
+            }});
+
+            container.appendChild(fragment);
+        }}
+
+        select.addEventListener("change", (event) => {{
+            renderChapter(event.target.value);
+        }});
+
+        if (select.value) {{
+            renderChapter(select.value);
+        }}
+
+        function scheduleHide() {{
+            if (hideTimer) {{
+                clearTimeout(hideTimer);
+            }}
+            hideTimer = setTimeout(() => {{
+                controls.classList.add("controls-hidden");
+            }}, 2000);
+        }}
+
+        scheduleHide();
+        controls.addEventListener("mouseenter", () => {{
+            controls.classList.remove("controls-hidden");
+            if (hideTimer) {{
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }}
+        }});
+        controls.addEventListener("mouseleave", () => {{
+            scheduleHide();
+        }});
+    </script>
 </body>
 </html>
 """
 
 
-def generate_html():
-    images = []
-    for i in range(1, TOTAL_PAGES + 1):
-        # Wrap image in a div for overflow hidden
-        img_block = f'<div class="page-wrapper"><img src="svg/page_{i}.svg" alt="Page {i}" loading="lazy"></div>'
-        images.append(img_block)
+def build_chapters():
+    chapters = {}
+    for entry in SVG_DIR.iterdir():
+        if not entry.is_dir():
+            continue
+        if not re.fullmatch(r"c\d+", entry.name):
+            continue
+        pages = []
+        for svg in entry.glob("page_*.svg"):
+            match = re.search(r"page_(\d+)\.svg", svg.name)
+            if match:
+                pages.append(int(match.group(1)))
+        pages.sort()
+        if pages:
+            chapters[entry.name] = pages
 
-    html_content = HTML_TEMPLATE.format(images="\n        ".join(images))
+    def chapter_key(name):
+        return int(name[1:])
+
+    return dict(sorted(chapters.items(), key=lambda item: chapter_key(item[0])))
+
+
+def generate_html():
+    chapters = build_chapters()
+    chapter_options = []
+    for idx, chapter_id in enumerate(chapters.keys()):
+        chapter_num = chapter_id[1:]
+        if chapter_num == "0":
+            label = "Preface"
+        elif chapter_num == "21":
+            label = "Appendix"
+        elif chapter_num == "22":
+            label = "Bib & Index"
+        else:
+            label = f"Chapter {chapter_num}"
+        selected = " selected" if idx == 0 else ""
+        chapter_options.append(
+            f'<option value="{chapter_id}"{selected}>{label}</option>'
+        )
+
+    html_content = HTML_TEMPLATE.format(
+        chapter_options="\n            ".join(chapter_options),
+        chapters_json=json.dumps(chapters)
+    )
 
     OUTPUT_FILE.write_text(html_content, encoding="utf-8")
-    print(f"Generated {OUTPUT_FILE} with {TOTAL_PAGES} images.")
+    print(f"Generated {OUTPUT_FILE} with {len(chapters)} chapters.")
 
 
 if __name__ == "__main__":
