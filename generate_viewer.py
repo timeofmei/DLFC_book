@@ -84,7 +84,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const controls = document.getElementById("controls");
         let hideTimer = null;
         const CHAPTER_COOKIE = "dlfc_chapter";
-        const SCROLL_COOKIE = "dlfc_scroll";
 
         function setCookie(name, value, days = 30) {{
             const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
@@ -136,8 +135,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         select.addEventListener("change", (event) => {{
             renderChapter(event.target.value);
             setCookie(CHAPTER_COOKIE, event.target.value);
-            setCookie(SCROLL_COOKIE, "0");
-            window.scrollTo(0, 0);
         }});
 
         const savedChapter = getCookie(CHAPTER_COOKIE);
@@ -145,26 +142,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             select.value = savedChapter;
         }}
         renderChapter(select.value);
-
-        const savedScroll = parseInt(getCookie(SCROLL_COOKIE) || "0", 10);
-        if (!Number.isNaN(savedScroll) && savedScroll > 0) {{
-            setTimeout(() => {{
-                window.scrollTo(0, savedScroll);
-            }}, 100);
-        }}
-
-        let scrollTimer = null;
-        window.addEventListener("scroll", () => {{
-            if (scrollTimer) {{
-                clearTimeout(scrollTimer);
-            }}
-            scrollTimer = setTimeout(() => {{
-                setCookie(SCROLL_COOKIE, String(window.scrollY));
-            }}, 200);
-        }});
         window.addEventListener("beforeunload", () => {{
             setCookie(CHAPTER_COOKIE, select.value);
-            setCookie(SCROLL_COOKIE, String(window.scrollY));
         }});
 
         function scheduleHide() {{
